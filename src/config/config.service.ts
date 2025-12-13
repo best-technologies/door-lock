@@ -1,0 +1,114 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService as NestConfigService } from '@nestjs/config';
+
+@Injectable()
+export class AppConfigService {
+  constructor(private configService: NestConfigService) {}
+
+  get nodeEnv(): string {
+    return this.configService.get<string>('NODE_ENV', 'development');
+  }
+
+  get databaseUrl(): string {
+    return this.configService.get<string>('DATABASE_URL', '');
+  }
+
+  get backendBaseUrl(): string {
+    return this.configService.get<string>('BACKEND_BASE_URL', 'http://localhost:3000');
+  }
+
+  get port(): number {
+    return this.configService.get<number>('PORT', 3000);
+  }
+
+  get apiPrefix(): string {
+    return this.configService.get<string>('API_PREFIX', 'api');
+  }
+
+  get apiVersion(): string {
+    return this.configService.get<string>('API_VERSION', 'v1');
+  }
+
+  get corsOrigin(): string {
+    return this.configService.get<string>('CORS_ORIGIN', '*');
+  }
+
+  get logLevel(): string {
+    return this.configService.get<string>('LOG_LEVEL', 'info');
+  }
+
+  get apiHealthEndpoint(): string {
+    return this.configService.get<string>('API_HEALTH_ENDPOINT', '/health');
+  }
+
+  get isDevelopment(): boolean {
+    return this.nodeEnv === 'development';
+  }
+
+  get isProduction(): boolean {
+    return this.nodeEnv === 'production';
+  }
+
+  get isTest(): boolean {
+    return this.nodeEnv === 'test';
+  }
+
+  get jwtSecret(): string {
+    return this.configService.get<string>('JWT_SECRET', 'your-secret-key-change-in-production');
+  }
+
+  get jwtExpiresIn(): string {
+    return this.configService.get<string>('JWT_EXPIRES_IN', '24h');
+  }
+
+  get smtpHost(): string {
+    return this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com');
+  }
+
+  get smtpPort(): number {
+    return this.configService.get<number>('SMTP_PORT', 587);
+  }
+
+  get smtpUser(): string {
+    return this.configService.get<string>('SMTP_USER', '');
+  }
+
+  get smtpPassword(): string {
+    return this.configService.get<string>('SMTP_PASSWORD', '');
+  }
+
+  get smtpFromEmail(): string {
+    return this.configService.get<string>('SMTP_FROM_EMAIL', this.smtpUser);
+  }
+
+  get smtpFromName(): string {
+    return this.configService.get<string>('SMTP_FROM_NAME', 'Door Lock System');
+  }
+
+  // Office Hours Configuration
+  get officeOpeningTime(): string {
+    return this.configService.get<string>('OFFICE_OPENING_TIME', '08:00');
+  }
+
+  get officeClosingTime(): string {
+    return this.configService.get<string>('OFFICE_CLOSING_TIME', '17:00');
+  }
+
+  get lateThresholdMinutes(): number {
+    return this.configService.get<number>('LATE_THRESHOLD_MINUTES', 15);
+  }
+
+  get workingDays(): string {
+    return this.configService.get<string>('WORKING_DAYS', '1,2,3,4,5'); // Monday=1, Sunday=0
+  }
+
+  // Checkout Time Window Configuration
+  get checkoutWindowStart(): string {
+    return this.configService.get<string>('CHECKOUT_WINDOW_START', '16:50'); // 4:50 PM
+  }
+
+  get checkoutWindowEnd(): string {
+    return this.configService.get<string>('CHECKOUT_WINDOW_END', '17:05'); // 5:05 PM
+  }
+}
+
