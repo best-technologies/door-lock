@@ -77,12 +77,69 @@ export class AppConfigService {
     return this.configService.get<string>('SMTP_PASSWORD', '');
   }
 
-  get smtpFromEmail(): string {
-    return this.configService.get<string>('SMTP_FROM_EMAIL', this.smtpUser);
+  // Provider-specific from email/name configuration
+  get gmailFromEmail(): string {
+    return this.configService.get<string>('GMAIL_FROM_EMAIL', this.smtpUser);
   }
 
-  get smtpFromName(): string {
-    return this.configService.get<string>('SMTP_FROM_NAME', 'Door Lock System');
+  get gmailFromName(): string {
+    return this.configService.get<string>('GMAIL_FROM_NAME', 'Door Lock System');
+  }
+
+  get sendGridFromEmail(): string {
+    return this.configService.get<string>('SENDGRID_FROM_EMAIL', 'noreply@yourdomain.com');
+  }
+
+  get sendGridFromName(): string {
+    return this.configService.get<string>('SENDGRID_FROM_NAME', 'Door Lock System');
+  }
+
+  get resendFromEmail(): string {
+    return this.configService.get<string>('RESEND_FROM_EMAIL', 'noreply@yourdomain.com');
+  }
+
+  get resendFromName(): string {
+    return this.configService.get<string>('RESEND_FROM_NAME', 'Door Lock System');
+  }
+
+  // Unified email from email/name based on provider
+  get emailFromEmail(): string {
+    const provider = this.emailProvider.toLowerCase();
+    switch (provider) {
+      case 'sendgrid':
+        return this.sendGridFromEmail;
+      case 'resend':
+        return this.resendFromEmail;
+      case 'gmail':
+      default:
+        return this.gmailFromEmail;
+    }
+  }
+
+  get emailFromName(): string {
+    const provider = this.emailProvider.toLowerCase();
+    switch (provider) {
+      case 'sendgrid':
+        return this.sendGridFromName;
+      case 'resend':
+        return this.resendFromName;
+      case 'gmail':
+      default:
+        return this.gmailFromName;
+    }
+  }
+
+  // Email Provider Configuration
+  get emailProvider(): string {
+    return this.configService.get<string>('EMAIL_PROVIDER', 'gmail');
+  }
+
+  get sendGridApiKey(): string {
+    return this.configService.get<string>('SENDGRID_API_KEY', '');
+  }
+
+  get resendApiKey(): string {
+    return this.configService.get<string>('RESEND_API_KEY', '');
   }
 
   // Office Hours Configuration

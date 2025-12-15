@@ -54,6 +54,28 @@ export class AttendanceController {
     return this.attendanceService.findAll(filterDto);
   }
 
+  @Get('user/:userId/history')
+  @ApiOperation({
+    summary: 'Get attendance history for a user',
+    description: 'Retrieve attendance records for a specific user with optional date range, status, and pagination',
+  })
+  @ApiParam({ name: 'userId', description: 'User ID to fetch history for' })
+  @ApiQuery({ name: 'from', required: false, description: 'Start date (ISO date string)' })
+  @ApiQuery({ name: 'to', required: false, description: 'End date (ISO date string)' })
+  @ApiQuery({ name: 'status', required: false, description: 'Attendance status filter' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 20 })
+  @ApiResponse({
+    status: 200,
+    description: 'Attendance history retrieved successfully',
+  })
+  getUserHistory(
+    @Param('userId') userId: string,
+    @Query() filterDto: FilterAttendanceDto,
+  ) {
+    return this.attendanceService.getUserHistory(userId, filterDto);
+  }
+
   @Get('stats')
   @ApiOperation({
     summary: 'Get attendance statistics',

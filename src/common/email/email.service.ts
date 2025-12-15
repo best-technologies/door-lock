@@ -1,27 +1,47 @@
-import { Injectable } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { AppConfigService } from '../../config/config.service';
 import { LoggerService } from '../logger/logger.service';
 import { registrationEmailTemplate } from './templates/registration.template';
 import { passwordResetEmailTemplate } from './templates/password-reset.template';
+import { IEmailProvider } from './interfaces/email-provider.interface';
+import { EmailProviderFactory } from './providers/email-provider.factory';
 
 @Injectable()
-export class EmailService {
-  private transporter: nodemailer.Transporter;
+export class EmailService implements OnModuleInit {
+  private emailProvider: IEmailProvider;
 
   constructor(
     private readonly configService: AppConfigService,
     private readonly logger: LoggerService,
-  ) {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.smtpHost,
-      port: this.configService.smtpPort,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: this.configService.smtpUser,
-        pass: this.configService.smtpPassword,
-      },
-    });
+    private readonly providerFactory: EmailProviderFactory,
+  ) {}
+
+  async onModuleInit() {
+    try {
+      this.emailProvider = this.providerFactory.createProvider();
+      this.logger.info(
+        `Email service initialized with provider: ${this.configService.emailProvider}`,
+        'EmailService',
+      );
+      
+      // Optionally verify connection on startup (can be disabled for faster startup)
+      if (this.configService.isDevelopment) {
+        const isConnected = await this.verifyConnection();
+        if (!isConnected) {
+          this.logger.warn(
+            'Email provider connection verification failed. Emails may not be sent.',
+            'EmailService',
+          );
+        }
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to initialize email provider: ${error?.message || 'Unknown error'}`,
+        error?.stack,
+        'EmailService',
+      );
+      throw error;
+    }
   }
 
   /**
@@ -41,19 +61,18 @@ export class EmailService {
         email,
         password,
         userId,
-        companyName: this.configService.smtpFromName,
+        companyName: this.configService.emailFromName,
       });
 
-      const mailOptions = {
-        from: `"${this.configService.smtpFromName}" <${this.configService.smtpFromEmail}>`,
+      const result = await this.emailProvider.sendMail({
+        from: `"${this.configService.emailFromName}" <${this.configService.emailFromEmail}>`,
         to: email,
         subject: 'Welcome to Door Lock System - Your Account Details',
         html,
-      };
+      });
 
-      const info = await this.transporter.sendMail(mailOptions);
       this.logger.success(
-        `Registration email sent successfully to ${email}. Message ID: ${info.messageId}`,
+        `Registration email sent successfully to ${email}. Message ID: ${result.messageId}`,
         'EmailService',
       );
     } catch (error: any) {
@@ -80,19 +99,18 @@ export class EmailService {
       const html = passwordResetEmailTemplate({
         firstName,
         verificationCode,
-        companyName: this.configService.smtpFromName,
+        companyName: this.configService.emailFromName,
       });
 
-      const mailOptions = {
-        from: `"${this.configService.smtpFromName}" <${this.configService.smtpFromEmail}>`,
+      const result = await this.emailProvider.sendMail({
+        from: `"${this.configService.emailFromName}" <${this.configService.emailFromEmail}>`,
         to: email,
         subject: 'Password Reset Verification Code',
         html,
-      };
+      });
 
-      const info = await this.transporter.sendMail(mailOptions);
       this.logger.success(
-        `Password reset email sent successfully to ${email}. Message ID: ${info.messageId}`,
+        `Password reset email sent successfully to ${email}. Message ID: ${result.messageId}`,
         'EmailService',
       );
     } catch (error: any) {
@@ -110,9 +128,16 @@ export class EmailService {
    */
   async verifyConnection(): Promise<boolean> {
     try {
-      await this.transporter.verify();
-      this.logger.success('Email service connection verified', 'EmailService');
-      return true;
+      if (!this.emailProvider) {
+        this.logger.warn('Email provider not initialized', 'EmailService');
+        return false;
+      }
+      
+      const result = await this.emailProvider.verifyConnection();
+      if (result) {
+        this.logger.success('Email service connection verified', 'EmailService');
+      }
+      return result;
     } catch (error: any) {
       this.logger.error(
         `Email service connection failed: ${error?.message || 'Unknown error'}`,

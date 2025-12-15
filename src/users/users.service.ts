@@ -409,17 +409,30 @@ export class UsersService {
   }
 
   async registerFingerprint(userId: string, fingerprintId: number) {
+    // Trim userId to handle any whitespace issues
+    const trimmedUserId = userId.trim();
+    
     try {
+      
       this.logger.info(
-        `Registering fingerprint ${fingerprintId} for user: ${userId}`,
+        `Registering fingerprint ${fingerprintId} for user: ${trimmedUserId}`,
         'UsersService',
       );
 
-      // Verify user exists
-      const user = await this.prisma.user.findUniqueOrThrow({
-        where: { userId },
+      // Verify user exists - use findFirst with better error handling
+      const user = await this.prisma.user.findUnique({
+        where: { userId: trimmedUserId },
         select: { id: true, userId: true },
       });
+
+      if (!user) {
+        // Log the exact value being searched for debugging
+        this.logger.warn(
+          `User not found: ${trimmedUserId} (length: ${trimmedUserId.length}, char codes: ${trimmedUserId.split('').map(c => c.charCodeAt(0)).join(',')})`,
+          'UsersService',
+        );
+        throw new NotFoundException(`User with ID ${trimmedUserId} not found`);
+      }
 
       // Check if fingerprint ID already exists for this user
       const existingFingerprint = await this.prisma.fingerprintId.findFirst({
@@ -431,7 +444,7 @@ export class UsersService {
 
       if (existingFingerprint) {
         this.logger.warn(
-          `Fingerprint ${fingerprintId} already registered for user: ${userId}`,
+          `Fingerprint ${fingerprintId} already registered for user: ${trimmedUserId}`,
           'UsersService',
         );
         throw new ConflictException('Fingerprint ID already registered for this user');
@@ -446,7 +459,7 @@ export class UsersService {
       });
 
       this.logger.success(
-        `Fingerprint ${fingerprintId} registered successfully for user: ${userId}`,
+        `Fingerprint ${fingerprintId} registered successfully for user: ${trimmedUserId}`,
         'UsersService',
       );
 
@@ -457,15 +470,11 @@ export class UsersService {
         createdAt: fingerprint.createdAt,
       });
     } catch (error: any) {
-      if (error.code === 'P2025') {
-        this.logger.warn(`User not found: ${userId}`, 'UsersService');
-        throw new NotFoundException(`User with ID ${userId} not found`);
-      }
-      if (error instanceof ConflictException) {
+      if (error instanceof NotFoundException || error instanceof ConflictException) {
         throw error;
       }
       this.logger.error(
-        `Failed to register fingerprint for user ${userId}: ${error?.message || 'Unknown error'}`,
+        `Failed to register fingerprint for user ${trimmedUserId}: ${error?.message || 'Unknown error'}`,
         error?.stack,
         'UsersService',
       );

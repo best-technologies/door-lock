@@ -391,6 +391,9 @@ export class AttendanceService {
 
       const where: any = {};
 
+      const hasCustomFilters =
+        filterDto.userId || filterDto.from || filterDto.to || filterDto.status || filterDto.department;
+
       if (filterDto.userId) {
         where.userId = filterDto.userId;
       }
@@ -405,6 +408,20 @@ export class AttendanceService {
           toDate.setHours(23, 59, 59, 999);
           where.date.lte = toDate;
         }
+      }
+
+      // Default: if no filters are provided, return attendance for today
+      if (!hasCustomFilters) {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        where.date = {
+          gte: startOfDay,
+          lte: endOfDay,
+        };
       }
 
       if (filterDto.status) {
@@ -443,18 +460,112 @@ export class AttendanceService {
 
       this.logger.success(`Successfully fetched ${attendance.length} attendance records (total: ${total})`, 'AttendanceService');
 
-      return ResponseHelper.success('Attendance records retrieved successfully', {
-        data: attendance,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
+      const response = ResponseHelper.paginated('Attendance records retrieved successfully', attendance, total, page, limit);
+
+      const now = new Date();
+      const currentDate = now.toISOString().split('T')[0];
+
+      return {
+        ...response,
+        timestamp: {
+          date: currentDate,
+          time: now.toISOString(),
         },
-      });
+      };
     } catch (error: any) {
       this.logger.error(
         `Failed to fetch attendance records: ${error?.message || 'Unknown error'}`,
+        error?.stack,
+        'AttendanceService',
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get attendance history for a specific user
+   */
+  async getUserHistory(userId: string, filterDto: FilterAttendanceDto) {
+    this.logger.info(
+      `Fetching attendance history for user ${userId} with filters: ${JSON.stringify(filterDto)}`,
+      'AttendanceService',
+    );
+
+    try {
+      const page = filterDto.page || 1;
+      const limit = filterDto.limit || 20;
+      const skip = (page - 1) * limit;
+
+      const where: any = {
+        userId,
+      };
+
+      if (filterDto.from || filterDto.to) {
+        where.date = {};
+        if (filterDto.from) {
+          where.date.gte = new Date(filterDto.from);
+        }
+        if (filterDto.to) {
+          const toDate = new Date(filterDto.to);
+          toDate.setHours(23, 59, 59, 999);
+          where.date.lte = toDate;
+        }
+      }
+
+      if (filterDto.status) {
+        where.status = filterDto.status;
+      }
+
+      const [attendance, total] = await Promise.all([
+        this.prisma.attendance.findMany({
+          where,
+          include: {
+            user: {
+              select: {
+                userId: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                department: true,
+                role: true,
+              },
+            },
+          },
+          orderBy: {
+            date: 'desc',
+          },
+          skip,
+          take: limit,
+        }),
+        this.prisma.attendance.count({ where }),
+      ]);
+
+      this.logger.success(
+        `Successfully fetched ${attendance.length} attendance records for user ${userId} (total: ${total})`,
+        'AttendanceService',
+      );
+
+      const response = ResponseHelper.paginated(
+        'Attendance history retrieved successfully',
+        attendance,
+        total,
+        page,
+        limit,
+      );
+
+      const now = new Date();
+      const currentDate = now.toISOString().split('T')[0];
+
+      return {
+        ...response,
+        timestamp: {
+          date: currentDate,
+          time: now.toISOString(),
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to fetch attendance history for user ${userId}: ${error?.message || 'Unknown error'}`,
         error?.stack,
         'AttendanceService',
       );

@@ -622,27 +622,46 @@ async function handlePasswordReset(email: string) {
 7. **Password Hashing**: Passwords are automatically hashed using bcrypt before storage
 8. **Account Status**: Only users with `status: "active"` can sign in
 9. **Password Reset**: Verification codes expire in 15 minutes and can only be used once
-10. **Email Notifications**: Registration and password reset emails are sent automatically via Gmail SMTP
+10. **Email Notifications**: Registration and password reset emails are sent automatically via the configured email provider (Gmail, SendGrid, or Resend)
 
 ---
 
 ## Email Configuration
 
-The system uses Gmail SMTP to send emails. Configure the following environment variables:
+The system supports multiple email providers. Configure your preferred provider using environment variables.
 
+### Quick Setup
+
+Set `EMAIL_PROVIDER` to one of: `gmail`, `sendgrid`, or `resend`
+
+**Gmail** (for development/testing):
 ```env
+EMAIL_PROVIDER=gmail
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-SMTP_FROM_EMAIL=your-email@gmail.com
-SMTP_FROM_NAME=Door Lock System
+GMAIL_FROM_EMAIL=your-email@gmail.com
+GMAIL_FROM_NAME=Door Lock System
 ```
 
-**Note**: For Gmail, you'll need to:
-1. Enable 2-factor authentication
-2. Generate an App Password (not your regular password)
-3. Use the App Password in `SMTP_PASSWORD`
+**SendGrid** (recommended for production):
+```env
+EMAIL_PROVIDER=sendgrid
+SENDGRID_API_KEY=your-sendgrid-api-key
+SENDGRID_FROM_EMAIL=noreply@yourdomain.com
+SENDGRID_FROM_NAME=Door Lock System
+```
+
+**Resend** (recommended for production):
+```env
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=your-resend-api-key
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+RESEND_FROM_NAME=Door Lock System
+```
+
+For detailed email provider setup instructions, see [Email Service Documentation](../common/email/EMAIL.md)
 
 ---
 
