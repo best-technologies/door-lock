@@ -14,11 +14,11 @@ export class AppConfigService {
   }
 
   get backendBaseUrl(): string {
-    return this.configService.get<string>('BACKEND_BASE_URL', 'http://localhost:3000');
+    return this.configService.get<string>('BACKEND_BASE_URL', 'http://localhost:1000');
   }
 
   get port(): number {
-    return this.configService.get<number>('PORT', 3000);
+    return this.configService.get<number>('PORT', 1000);
   }
 
   get apiPrefix(): string {
